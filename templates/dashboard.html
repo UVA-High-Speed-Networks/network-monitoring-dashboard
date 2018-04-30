@@ -10,14 +10,20 @@
 			<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.0/socket.io.dev.js"></script>
 		<!-- css -->
 			<!-- bootstrap css -->
-			<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
-			<!-- bootstrap theme css -->
-			<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css">
+			<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css">
 			<!-- font awesome css -->
 			<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
 		</head>
-			<h1>Dashboard</h1> <h3>Last <span id="minutes">{{minutes}}</span> Minutes <span id="device"></span></h3> 
-			<div id="pull-data"><h6>Pulling data...</h6><i class="fa fa-spinner fa-spin" style="font-size:24px"></i></div>
+			<div id="header">
+				<h1>Dashboard</h1> 
+				<h3>
+					Last <span id="minutes">{{minutes}}</span> Minutes <span id="device"></span>
+				</h3>
+			</div>
+			<br>
+			<div id="pull-data">
+				<h6>Pulling data...</h6>
+				<i class="fa fa-spinner fa-spin" style="font-size:24px"></i></div>
 			<div id="data-graphs"></div>
 			<div id="data"></div>
 	</body>
@@ -25,6 +31,11 @@
 		body {
 			padding: 40px;	
 			background: #f4f4f4;
+			text-align: center;
+		}
+		#header {
+			text-align: left;
+			padding-left: 100px;
 		}
 		.graph-box {
 			text-align: center;
@@ -76,7 +87,11 @@
 				if(key == timeKey || key == deviceKey) {
 					return;
 				}
-				graphLineData(key);
+				if(key.startsWith('cpu')) {
+					graphLineData(key, { min: 0, max: 1 });
+				} else {
+					graphLineData(key);
+				}
 			});
 
 			// set device name in header
@@ -89,7 +104,7 @@
 			openSocket();
 		}
 
-		var graphLineData = function(lineDataKey) {
+		var graphLineData = function(lineDataKey, yBounds) {
 			$('#data-graphs').append(`<div id="${lineDataKey}-graph"class="graph-box"><h3>${lineDataKey}</h3><svg width=${svgWidth} height=${svgHeight}></svg></div>`);
 
 			var svg = d3.select('.graph-box:last-child > svg'),
@@ -106,7 +121,11 @@
 		    .y(function(d) { return y(d.val); });
 
 		  x.domain(d3.extent(lineData[timeKey]));
-		  y.domain(d3.extent(lineData[lineDataKey]));
+		  if(yBounds) {
+		  	y.domain([yBounds.min, yBounds.max]);
+		  } else {
+			  y.domain(d3.extent(lineData[lineDataKey]));
+			}
 
 		  finalLineData[lineDataKey] = lineData[timeKey].map(function(e, i) {
 			  return {
@@ -142,7 +161,7 @@
 		}
 
 
-		var updateLineGraph = function(lineDataKey,data) {
+		var updateLineGraph = function(lineDataKey, data) {
 			console.log('updating',lineDataKey);
 
 			let newLineDataPoint = {
