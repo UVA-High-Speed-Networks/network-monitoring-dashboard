@@ -1,0 +1,3 @@
+config.json
+tmp_*
+*.pyc

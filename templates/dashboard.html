@@ -1,0 +1,208 @@
+<html>
+	<body>
+		<head>
+			<title>Bro Dashboard</title>
+		<!-- js -->
+			<!-- jquery -->
+			<script src="http://code.jquery.com/jquery-3.3.1.min.js"></script>
+			<!-- d3js -->
+			<script src="https://d3js.org/d3.v4.js"></script>
+			<!-- <script src="http://d3js.org/d3.v3.js"></script> -->
+			<!-- socket io -->
+			<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.0/socket.io.dev.js"></script>
+		<!-- css -->
+			<!-- bootstrap css -->
+			<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+			<!-- bootstrap theme css -->
+			<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css">
+			<!-- font awesome css -->
+			<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+		</head>
+			<h1>Dashboard</h1> <h3>Last <span id="minutes">{{minutes}}</span> Minutes <span id="device"></span></h3> 
+			<div id="pull-data"><h6>Pulling data...</h6><i class="fa fa-spinner fa-spin" style="font-size:24px"></i></div>
+			<div id="data-graphs"></div>
+			<div id="data"></div>
+	</body>
+	<style>
+		body {
+			padding: 40px;	
+			background: #f4f4f4;
+		}
+		.graph-box {
+			text-align: center;
+			display: inline-block;
+		}
+		.line {
+			fill: none;
+			stroke: steelblue;
+			stroke-width: 1.5px;
+		}
+		#data {
+			font-size: 5px;
+		}
+	</style>
+	<script>
+
+		const svgHeight = 200;
+		const svgWidth = svgHeight * 1.5;
+		var lineData = {};
+		var lines = {};
+		var paths = {};
+		var x = {};
+		var finalLineData = {};
+		var parsedData; 
+		var ws;
+		let timeKey = 'ts';
+		let deviceKey = 'device';
+
+		var setup = function() {
+			let strMinutes = $('#minutes').text();
+			let numMinutes = parseInt(strMinutes);
+			// req api endpoint
+			let last_hour_data_endpoint = '/dashboard_data/' + strMinutes;
+			console.log(last_hour_data_endpoint);
+			$.get(last_hour_data_endpoint, processInitialData);
+		}
+
+		var processInitialData = function(data) {
+		  $('#data').append(data);
+			// parse data json
+			parsedData = JSON.parse(data);
+			// create object to store all object data
+			let dataTypes = Object.keys(parsedData[Object.keys(parsedData)[0]]);
+			dataTypes.forEach((type) => {
+				lineData[type] = [];
+			});
+		  // iterate through all rows of data and store in [lineData]
+			Object.keys(parsedData).forEach((key) => {
+				let parsedDataRow = parsedData[key];
+				dataTypes.forEach((type) => {
+					lineData[type].push(parsedDataRow[type]);
+				});
+			});
+			// Show line graphs
+			Object.keys(lineData).sort().forEach((key) => {
+				if(key == timeKey || key == deviceKey) {
+					return;
+				}
+				graphLineData(key);
+			});
+
+			// set device name in header
+			$('#device').text(`(${lineData['device'][0]})`);
+
+			// Remove 'pulling data' display
+			$('#pull-data').remove();
+
+			// open socket & start listening
+			openSocket();
+		}
+
+		var graphLineData = function(lineDataKey) {
+			$('#data-graphs').append(`<div id="${lineDataKey}-graph"class="graph-box"><h3>${lineDataKey}</h3><svg width=${svgWidth} height=${svgHeight}></svg></div>`);
+
+			var svg = d3.select('.graph-box:last-child > svg'),
+		    margin = {top: 20, right: 20, bottom: 30, left: 50},
+		    width = svg.attr("width") - margin.left - margin.right,
+		    height = svg.attr("height") - margin.top - margin.bottom,
+		    g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+			x[lineDataKey] = d3.scaleTime().rangeRound([0, width]);
+			var y = d3.scaleLinear().rangeRound([height, 0]);
+
+			lines[lineDataKey] = d3.line()
+	      // .interpolate('linear')
+		    .x(function(d) { return x[lineDataKey](d.time); })
+		    .y(function(d) { return y(d.val); });
+
+		  x[lineDataKey].domain(d3.extent(lineData[timeKey]));
+		  y.domain(d3.extent(lineData[lineDataKey]));
+
+		  finalLineData[lineDataKey] = lineData[timeKey].map(function(e, i) {
+			  return {
+			  	time: new Date(e*1), // should be e*1000 but that doesnt work 
+			  	val: lineData[lineDataKey][i]
+			  };
+			});;
+
+		  g.append("g")
+	      .attr("transform", "translate(0," + height + ")")
+	      .call(d3.axisBottom(x[lineDataKey]))
+		    .select(".domain")
+	      .remove();
+
+		  g.append("g")
+	      .call(d3.axisLeft(y))
+		    .append("text")
+	      .attr("fill", "#000")
+	      .attr("transform", "rotate(-90)")
+	      .attr("y", 6)
+	      .attr("dy", "0.71em")
+	      .attr("text-anchor", "end")
+	      .text(lineDataKey);
+
+		  // g.append("path")
+	   //    .datum(finalLineData[lineDataKey])
+	   //    .attr("fill", "none")
+	   //    .attr("stroke", "steelblue")
+	   //    .attr("stroke-linejoin", "round")
+	   //    .attr("stroke-linecap", "round")
+	   //    .attr("stroke-width", 1.5)
+	   //    .attr("d", lines[lineDataKey]);
+
+	   // console.log(lineDataKey + ':', lines[lineDataKey]);
+	   // console.log(lineDataKey, finalLineData[lineDataKey], '\n');
+
+		  paths[lineDataKey] = g.append("path")
+		      .datum(finalLineData[lineDataKey])
+		      .attr("class", "line")
+		      .attr("d", lines[lineDataKey]);
+		}
+
+
+		var updateLineGraph = function(lineDataKey, data) {
+			console.log('updating',lineDataKey);
+
+			let newLineDataPoint = {
+				time: new Date(data[timeKey]),
+				val: data[lineDataKey]
+			}
+			// push new data point onto the back
+			finalLineData[lineDataKey].push(newLineDataPoint);
+
+			// redraw the line and slide it to the left
+			paths[lineDataKey]
+				.attr("d", lines[lineDataKey])
+        .attr("transform", null)
+	      .transition()
+        .attr("transform", "translate(" + x[lineDataKey](0) + ")");
+
+      // pop the old data point off the front
+			finalLineData[lineDataKey].shift();
+		}
+
+		var openSocket = function() {
+			var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/dashboard_update');
+			console.log('socket io opened', socket);
+
+	    socket.on('connect', function() {
+	    	console.log('socket connected');
+	    });
+	    
+	    socket.on('data_updated', function(data) {
+	    	console.log(`data_updated`, data);
+	    	Object.keys(data).forEach((dataKey) => {
+	    		// update graph
+	    		updateLineGraph(dataKey, data); 
+	    	});
+	    });
+	    
+	    socket.on('disconnect', function() {
+	    	console.log('socket disconnected');
+	    });
+		}
+
+		$(document).ready(setup);
+
+	</script>
+</html>
