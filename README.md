@@ -1,5 +1,7 @@
 ## Bro Dashboard
 
+### Setup 
+
 To set up the dashboard, use `pip` to install:
 - flask
 - flask_socketio
@@ -20,3 +22,7 @@ To run, first create a configuration file called `config.json` that looks someth
 	"server": "remote.server.url.edu"
 }
 ```
+
+### Screenshot
+
+![screenshot](https://raw.githubusercontent.com/UVA-High-Speed-Networks/network-monitoring-dashboard/master/dashboard-screenshot.png)
