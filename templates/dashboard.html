@@ -1,13 +1,11 @@
 <html>
 	<body>
 		<head>
-			<title>Bro Dashboard</title>
 		<!-- js -->
 			<!-- jquery -->
 			<script src="http://code.jquery.com/jquery-3.3.1.min.js"></script>
 			<!-- d3js -->
 			<script src="https://d3js.org/d3.v4.js"></script>
-			<!-- <script src="http://d3js.org/d3.v3.js"></script> -->
 			<!-- socket io -->
 			<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.0/socket.io.dev.js"></script>
 		<!-- css -->
@@ -32,11 +30,6 @@
 			text-align: center;
 			display: inline-block;
 		}
-		.line {
-			fill: none;
-			stroke: steelblue;
-			stroke-width: 1.5px;
-		}
 		#data {
 			font-size: 5px;
 		}
@@ -46,9 +39,6 @@
 		const svgHeight = 200;
 		const svgWidth = svgHeight * 1.5;
 		var lineData = {};
-		var lines = {};
-		var paths = {};
-		var x = {};
 		var finalLineData = {};
 		var parsedData; 
 		var ws;
@@ -80,6 +70,7 @@
 					lineData[type].push(parsedDataRow[type]);
 				});
 			});
+			console.log('lineData', lineData);
 			// Show line graphs
 			Object.keys(lineData).sort().forEach((key) => {
 				if(key == timeKey || key == deviceKey) {
@@ -107,27 +98,26 @@
 		    height = svg.attr("height") - margin.top - margin.bottom,
 		    g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-			x[lineDataKey] = d3.scaleTime().rangeRound([0, width]);
+			var x = d3.scaleTime().rangeRound([0, width]);
 			var y = d3.scaleLinear().rangeRound([height, 0]);
 
-			lines[lineDataKey] = d3.line()
-	      // .interpolate('linear')
-		    .x(function(d) { return x[lineDataKey](d.time); })
+			var line = d3.line()
+		    .x(function(d) { return x(d.time); })
 		    .y(function(d) { return y(d.val); });
 
-		  x[lineDataKey].domain(d3.extent(lineData[timeKey]));
+		  x.domain(d3.extent(lineData[timeKey]));
 		  y.domain(d3.extent(lineData[lineDataKey]));
 
 		  finalLineData[lineDataKey] = lineData[timeKey].map(function(e, i) {
 			  return {
-			  	time: new Date(e*1), // should be e*1000 but that doesnt work 
+			  	time: new Date(e), 
 			  	val: lineData[lineDataKey][i]
 			  };
 			});;
 
 		  g.append("g")
 	      .attr("transform", "translate(0," + height + ")")
-	      .call(d3.axisBottom(x[lineDataKey]))
+	      .call(d3.axisBottom(x))
 		    .select(".domain")
 	      .remove();
 
@@ -141,26 +131,18 @@
 	      .attr("text-anchor", "end")
 	      .text(lineDataKey);
 
-		  // g.append("path")
-	   //    .datum(finalLineData[lineDataKey])
-	   //    .attr("fill", "none")
-	   //    .attr("stroke", "steelblue")
-	   //    .attr("stroke-linejoin", "round")
-	   //    .attr("stroke-linecap", "round")
-	   //    .attr("stroke-width", 1.5)
-	   //    .attr("d", lines[lineDataKey]);
-
-	   // console.log(lineDataKey + ':', lines[lineDataKey]);
-	   // console.log(lineDataKey, finalLineData[lineDataKey], '\n');
-
-		  paths[lineDataKey] = g.append("path")
-		      .datum(finalLineData[lineDataKey])
-		      .attr("class", "line")
-		      .attr("d", lines[lineDataKey]);
+		  g.append("path")
+	      .datum(finalLineData[lineDataKey])
+	      .attr("fill", "none")
+	      .attr("stroke", "steelblue")
+	      .attr("stroke-linejoin", "round")
+	      .attr("stroke-linecap", "round")
+	      .attr("stroke-width", 1.5)
+	      .attr("d", line);
 		}
 
 
-		var updateLineGraph = function(lineDataKey, data) {
+		var updateLineGraph = function(lineDataKey,data) {
 			console.log('updating',lineDataKey);
 
 			let newLineDataPoint = {
@@ -171,11 +153,13 @@
 			finalLineData[lineDataKey].push(newLineDataPoint);
 
 			// redraw the line and slide it to the left
-			paths[lineDataKey]
-				.attr("d", lines[lineDataKey])
+			let graphBoxSelector = `#${lineDataKey}-graph`;
+			let graphBoxPath = d3.select(`${graphBoxSelector} path`);
+			graphBoxPath
+				.attr("d", line)
         .attr("transform", null)
 	      .transition()
-        .attr("transform", "translate(" + x[lineDataKey](0) + ")");
+        .attr("transform", "translate(" + x(0) + ")");
 
       // pop the old data point off the front
 			finalLineData[lineDataKey].shift();
