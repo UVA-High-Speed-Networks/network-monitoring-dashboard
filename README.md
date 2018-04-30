@@ -19,7 +19,8 @@ To run, first create a configuration file called `config.json` that looks someth
 {
 	"username": "your-username",
 	"password": "your-password,
-	"server": "remote.server.url.edu"
+	"server": "remote.server.url.edu",
+	"debug": true
 }
 ```
 
