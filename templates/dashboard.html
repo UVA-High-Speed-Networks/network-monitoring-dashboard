@@ -22,12 +22,14 @@
 			</div>
 			<br>
 			<div id="pull-data">
-				<h6>Pulling data...</h6>
+				<h4>Pulling data...</h4>
 				<i class="fa fa-spinner fa-spin" style="font-size:24px"></i></div>
-			<h2> Utilization </h2>
-			<div id="data-graphs-2"></div>
-			<h2> All Graphs </h2>
-			<div id="data-graphs"></div>
+			<div id="data-graphs-2" class="data-graphs-box">
+				<h2 class="data-graphs-header"> Utilization </h2>
+			</div>
+			<div id="data-graphs" class="data-graphs-box">
+				<h2 class="data-graphs-header"> All Graphs </h2>
+			</div>
 			<div id="data"></div>
 	</body>
 	<style>
@@ -46,15 +48,26 @@
 			margin-bottom: 30px;
 			margin-top: 70px;
 		}
+		.graph-box-2 {
+			margin-left: 25px;
+			margin-right: 25px;
+		}
 		#data {
 			font-size: 5px;
+		}
+		.data-graphs-box {
+			border: 1px solid #e0e0e0;
+			padding: 5px;
+	    border-radius: 7px;
+		}
+		.data-graphs-header {
+			display: none;
 		}
 	</style>
 	<script>
 
-		const svgHeight = 300;
+		const svgHeight = 350;
 		const svgWidth = svgHeight * 1.5;
-		const maxXAxisTicks = 8;
 		var lineData = {};
 		var finalLineData = {};
 		var parsedData; 
@@ -116,18 +129,25 @@
 			// Remove 'pulling data' display
 			$('#pull-data').remove();
 
+			// Show headers
+			$('.data-graphs-header').css('display', 'inherit');
+
 			// open socket & start listening
 			openSocket();
 		}
 
 		var graphTwoLines = function(lineOneKey, lineTwoKey) {
+			const largeSvgHeight = svgHeight * 1.2;
+			const largeSvgWidth = svgWidth * 1.2;
+			const lineOneColor = 'steelblue';
+			const lineTwoColor = 'maroon';
 			let lineOneData = lineData[lineOneKey];
 			let lineTwoData = lineData[lineTwoKey];
 
-			$('#data-graphs-2').append(`<div id="${lineOneKey}-${lineTwoKey}-graph"class="graph-box"><h3>${lineOneKey} vs. ${lineTwoKey}</h3><svg width=${svgWidth} height=${svgHeight}></svg></div>`);
+			$('#data-graphs-2').append(`<div id="${lineOneKey}-${lineTwoKey}-graph"class="graph-box graph-box-2"><h3>${lineOneKey} vs. ${lineTwoKey}</h3><svg width=${largeSvgWidth} height=${largeSvgHeight}></svg></div>`);
 
 			let svg = d3.select('.graph-box:last-child > svg'),
-		    margin = {top: 20, right: 30, bottom: 30, left: 50},
+		    margin = { top: 50, right: 60, bottom: 30, left: 60 },
 		    width = svg.attr("width") - margin.left - margin.right,
 		    height = svg.attr("height") - margin.top - margin.bottom,
 		    g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
@@ -149,7 +169,7 @@
 		  y2.domain(d3.extent(lineTwoData));
 
 		  g.append("g")
-	      .attr("transform", "translate(0," + height + ")")
+	      .attr("transform", `translate(0,${height})`)
 	      .call(d3.axisBottom(x))
 		    .select(".domain")
 	      .remove();
@@ -157,17 +177,17 @@
 		  g.append("g")
 	      .call(d3.axisLeft(y1))
 		    .append("text")
-	      .attr("fill", "#000")
-	      .attr("transform", "rotate(-90)")
+	      .attr("fill", lineOneColor)
 	      .attr("y", 6)
 	      .attr("dy", "0.71em")
 	      .attr("text-anchor", "end")
+	      .style("transform", "translateY(-30px)")
 	      .text(lineOneKey);
 
 		  g.append("path")
 	      .datum(finalLineData[lineOneKey])
 	      .attr("fill", "none")
-	      .attr("stroke", "steelblue")
+	      .attr("stroke", lineOneColor)
 	      .attr("stroke-linejoin", "round")
 	      .attr("stroke-linecap", "round")
 	      .attr("stroke-width", 1.5)
@@ -175,19 +195,19 @@
 
 		  g.append("g")
 	      .call(d3.axisRight(y2))
-	      .attr("transform", "translate(" + width + ",0)")
+	      .attr("transform", `translate(${width},0)`)
 		    .append("text")
-	      .attr("fill", "orange")
-	      .attr("transform", "rotate(-90)")
+	      .attr("fill", lineTwoColor)
 	      .attr("y", 6)
 	      .attr("dy", "0.71em")
 	      .attr("text-anchor", "end")
+	      .style("transform", "translateY(-30px)")
 	      .text(lineTwoKey);
 		
 		  g.append("path")
 	      .datum(finalLineData[lineTwoKey])
 	      .attr("fill", "none")
-	      .attr("stroke", "orange")
+	      .attr("stroke", lineTwoColor)
 	      .attr("stroke-linejoin", "round")
 	      .attr("stroke-linecap", "round")
 	      .attr("stroke-width", 1.5)
@@ -229,7 +249,7 @@
 
 		  g.append("g")
 	      .attr("transform", "translate(0," + height + ")")
-	      .call(d3.axisBottom(x).ticks(maxXAxisTicks))
+	      .call(d3.axisBottom(x))
 		    .select(".domain")
 	      .remove();
 
