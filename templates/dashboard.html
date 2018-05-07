@@ -25,6 +25,7 @@
 				<h6>Pulling data...</h6>
 				<i class="fa fa-spinner fa-spin" style="font-size:24px"></i></div>
 			<div id="data-graphs"></div>
+			<div id="data-graphs-2"></div>
 			<div id="data"></div>
 	</body>
 	<style>
@@ -120,7 +121,7 @@
 			let lineOneData = lineData[lineOneKey];
 			let lineTwoData = lineData[lineTwoKey];
 
-			$('#data-graphs').append(`<div id="${lineOneKey}-${lineTwoKey}-graph"class="graph-box"><h3>${lineOneKey} vs. ${lineTwoKey}</h3><svg width=${svgWidth} height=${svgHeight}></svg></div>`);
+			$('#data-graphs-2').append(`<div id="${lineOneKey}-${lineTwoKey}-graph"class="graph-box"><h3>${lineOneKey} vs. ${lineTwoKey}</h3><svg width=${svgWidth} height=${svgHeight}></svg></div>`);
 
 			let svg = d3.select('.graph-box:last-child > svg'),
 		    margin = {top: 20, right: 30, bottom: 30, left: 50},
