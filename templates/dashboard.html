@@ -32,7 +32,6 @@
 				<h2 class="data-graphs-header"> All Graphs </h2>
 			</div>
 			<div id="data"></div>
-			<input type="hidden" id="num-minutes">{{minutes}}</input>
 	</body>
 	<style>
 		body {
@@ -233,7 +232,7 @@
 			line = d3.line()
 		    .x(function(d) { return x(d.time); })
 		    .y(function(d) { return y(d.val); })
-		    .defined(function(d) { return !(!(d.val)); }) ;
+		    .defined(function(d) { return d.val; }) ;
 
 		  x.domain(d3.extent(lineData[timeKey].map(x => new Date(x * 1000))));
 		  if(yBounds) {
@@ -242,12 +241,16 @@
 			  y.domain(d3.extent(lineData[lineDataKey]));
 			}
 
-		  finalLineData[lineDataKey] = lineData[timeKey].map(function(e, i) {
+			const dataToDisplay = lineData[timeKey].map(function(e, i) {
 			  return {
-			  	time: new Date(parseInt(e * 1000)), 
+			  	time: new Date(parseInt(e * 1000)),
 			  	val: lineData[lineDataKey][i]
 			  };
-			});;
+			});
+
+			finalLineData[lineDataKey] = dataToDisplay;
+
+			let filteredData = dataToDisplay.filter(line.defined());
 
 		  g.append("g")
 	      .attr("transform", "translate(0," + height + ")")
@@ -265,13 +268,25 @@
 	      .attr("text-anchor", "end")
 	      .text(lineDataKey);
 
+      // draw actual path
 		  g.append("path")
 	      .attr("fill", "none")
 	      .attr("stroke", "steelblue")
 	      .attr("stroke-linejoin", "round")
 	      .attr("stroke-linecap", "round")
 	      .attr("stroke-width", 1.5)
-	      .attr("d", line(finalLineData[lineDataKey]));
+	      .attr("d", line(dataToDisplay));
+
+      // draw dashed line to connect missing data
+		  g.append("path")
+	      .attr("fill", "none")
+	      .attr("stroke", "steelblue")
+	      .attr("stroke-linejoin", "round")
+	      .attr("stroke-linecap", "round")
+	      .attr("stroke-width", 1.5)
+	      .style('stroke-dasharray', '1 5')
+	      .style('opacity', '0.5')
+	      .attr("d", line(filteredData));
 		}
 
 
