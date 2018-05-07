@@ -2,7 +2,7 @@
 """
 Created on Wed Mar 14 18:14:17 2018
 
-@author: babraham
+@author: babraham, jxmorris12
 """
 
 import subprocess
@@ -16,13 +16,16 @@ import datetime
 
 
 def capOutput(cmd):
-    try: output = subprocess.Popen(cmd, stdout=subprocess.PIPE ).communicate()[0]
-    except: print("couldn't run command")
-    return output
+    try: 
+        output = subprocess.Popen(cmd, stdout=subprocess.PIPE ).communicate()[0]
+        return output
+    except Exception as e: 
+        print("couldn't run command", e)
+        return None
 
 def getPacketLoss(waitTime=10):
     cmd = ['broctl', 'netstats']
-    plDict = {k:None for k in ['packetLoss','packetRateBro', 'cumPacketLoss']}
+    plDict = { k: None for k in ['packetLoss','packetRateBro', 'cumPacketLoss'] }
     try:
         ti = time.time()
         startOuptut = capOutput(cmd)
@@ -115,13 +118,20 @@ def getMemUsage():
     nums = re.findall('[0-9]+',output)
     return float(nums[1])/float(nums[0])
 
-#totalTime: The time interfal at which all stts are calculated. i.e. the 
-#    cumulataive time it takes to run the script
+def getIfconfigPacketDrops():
+    ifconfig_output = capOutput(['ifconfig', 'em2']).split('\n')
+    output_line_with_drops = ifconfig_output[4]
+    output_tokens = [x for x in output_line_with_drops.split(' ') if len(x) > 0]
+    packet_loss_ct = int(output_tokens[4])
+    return packet_loss_ct
+
+# totalTime: The time interfal at which all stts are calculated. i.e. the 
+# cumulative time it takes to run the script
 def getAllStats(totalTime, device="em1", units = "Gbps", printTs = False):
     if totalTime < 30:
         print('totalTime is too short. For best results, sample at 30 seconds or more')
         sys.exit(0)
-    waitTime = float(totalTime - 5.77) / 2.5  #see regression equation below. 
+    waitTime = float(totalTime - 5.77) / 2.5  # see regression equation below. 
     startTime = time.time()
     pLossDict = getPacketLoss(waitTime)
     if printTs: print ('ploss time: {}'.format(time.time() - startTime))
@@ -129,12 +139,17 @@ def getAllStats(totalTime, device="em1", units = "Gbps", printTs = False):
     thruputDict = getUtilization(waitTime, device, units)
     if printTs: print ('throughput time: {}'.format(time.time() - ct))
     ct = time.time()
-    cpu_dict = getCPU(waitTime / 2)
+    ifconfig_drops_1 = getIfconfigPacketDrops()
+    get_cpu_wait_time = waitTime / 2
+    cpu_dict = getCPU(get_cpu_wait_time)
+    ifconfig_drops_2 = getIfconfigPacketDrops()
+    ifconfig_packet_drop_rate = (ifconfig_drops_2 - ifconfig_drops_1) / float(get_cpu_wait_time)
     resDict = {k:v for k,v in thruputDict.items()}
     if printTs: print ('cpu time: {}'.format(time.time() - ct))
     for k,v in pLossDict.items(): resDict[k] = v
     for k,v in cpu_dict.items(): resDict[k] = v  
     resDict['mem_usage'] = getMemUsage()     
+    resDict['ifconfig_drop_rate'] = ifconfig_packet_drop_rate
     if printTs: print('total time: {}'.format(time.time()- startTime))
     return resDict   
 
@@ -152,8 +167,8 @@ def getAllStats(totalTime, device="em1", units = "Gbps", printTs = False):
 def monitor(device,fname=None,totalTime=30,maxTime=None, hasBro=True):
     ti = time.time()
     tf,dt = 0,0
-    if not fname: fname = 'trafficStats_v1_{}.txt'.format(device.lower())
-    if not maxTime: maxTime = 60*60*24*21
+    if not fname: fname = 'trafficStats_v2_{}.txt'.format(device.lower())
+    if not maxTime: maxTime = 60 * 60 * 24 * 21 # 21 days in seconds
     if device and totalTime:
         while dt < maxTime:
             if hasBro: res = getAllStats(totalTime, device)
