@@ -24,8 +24,10 @@
 			<div id="pull-data">
 				<h6>Pulling data...</h6>
 				<i class="fa fa-spinner fa-spin" style="font-size:24px"></i></div>
-			<div id="data-graphs"></div>
+			<h2> Utilization </h2>
 			<div id="data-graphs-2"></div>
+			<h2> All Graphs </h2>
+			<div id="data-graphs"></div>
 			<div id="data"></div>
 	</body>
 	<style>
@@ -50,8 +52,9 @@
 	</style>
 	<script>
 
-		const svgHeight = 200;
+		const svgHeight = 300;
 		const svgWidth = svgHeight * 1.5;
+		const maxXAxisTicks = 8;
 		var lineData = {};
 		var finalLineData = {};
 		var parsedData; 
@@ -141,7 +144,7 @@
 		    .x(function(d) { return x(d.time); })
 		    .y(function(d) { return y2(d.val); });
 
-		  x.domain(d3.extent(lineData[timeKey]));
+		  x.domain(d3.extent(lineData[timeKey].map(x => new Date(x * 1000))));
 		  y1.domain(d3.extent(lineOneData));
 		  y2.domain(d3.extent(lineTwoData));
 
@@ -210,7 +213,7 @@
 		    .y(function(d) { return y(d.val); })
 		    .defined(function(d) { return !(!(d.val)); }) ;
 
-		  x.domain(d3.extent(lineData[timeKey]));
+		  x.domain(d3.extent(lineData[timeKey].map(x => new Date(x * 1000))));
 		  if(yBounds) {
 		  	y.domain([yBounds.min, yBounds.max]);
 		  } else {
@@ -219,14 +222,14 @@
 
 		  finalLineData[lineDataKey] = lineData[timeKey].map(function(e, i) {
 			  return {
-			  	time: new Date(parseInt(e * 1)), 
+			  	time: new Date(parseInt(e * 1000)), 
 			  	val: lineData[lineDataKey][i]
 			  };
 			});;
 
 		  g.append("g")
 	      .attr("transform", "translate(0," + height + ")")
-	      .call(d3.axisBottom(x))
+	      .call(d3.axisBottom(x).ticks(maxXAxisTicks))
 		    .select(".domain")
 	      .remove();
 
@@ -253,7 +256,7 @@
 		var updateLineGraph = function(lineDataKey, data) {
 
 			let newLineDataPoint = {
-				time: new Date(parseInt(data[timeKey])),
+				time: new Date(data[timeKey] * 1000),
 				val: data[lineDataKey]
 			};
 
