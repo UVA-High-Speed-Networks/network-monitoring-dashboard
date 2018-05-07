@@ -79,6 +79,11 @@
 		  // iterate through all rows of data and store in [lineData]
 			Object.keys(parsedData).forEach((key) => {
 				let parsedDataRow = parsedData[key];
+				for(const _i in parsedDataRow) {
+					if(parsedDataRow[_i] == 'None') {
+						parsedDataRow[_i] = null;
+					}
+				}
 				dataTypes.forEach((type) => {
 					lineData[type].push(parsedDataRow[type]);
 				});
@@ -90,7 +95,8 @@
 					return;
 				}
 				if(key.startsWith('cpu')) {
-					graphOneLine(key, { min: 0, max: 1 });
+					graphOneLine(key);
+					// graphOneLine(key, { min: 0, max: 1 });
 				} else {
 					graphOneLine(key);
 				}
@@ -184,6 +190,8 @@
 	      .attr("d", line2);
 		}
 
+		var line;
+
 		var graphOneLine = function(lineDataKey, yBounds) {
 			$('#data-graphs').append(`<div id="${lineDataKey}-graph"class="graph-box"><h3>${lineDataKey}</h3><svg width=${svgWidth} height=${svgHeight}></svg></div>`);
 
@@ -196,9 +204,10 @@
 			var x = d3.scaleTime().rangeRound([0, width]);
 			var y = d3.scaleLinear().rangeRound([height, 0]);
 
-			var line = d3.line()
+			line = d3.line()
 		    .x(function(d) { return x(d.time); })
-		    .y(function(d) { return y(d.val); });
+		    .y(function(d) { return y(d.val); })
+		    .defined(function(d) { return !(!(d.val)); }) ;
 
 		  x.domain(d3.extent(lineData[timeKey]));
 		  if(yBounds) {
@@ -231,40 +240,48 @@
 	      .text(lineDataKey);
 
 		  g.append("path")
-	      .datum(finalLineData[lineDataKey])
 	      .attr("fill", "none")
 	      .attr("stroke", "steelblue")
 	      .attr("stroke-linejoin", "round")
 	      .attr("stroke-linecap", "round")
 	      .attr("stroke-width", 1.5)
-	      .attr("d", line);
+	      .attr("d", line(finalLineData[lineDataKey]));
 		}
 
 
 		var updateLineGraph = function(lineDataKey, data) {
-			console.log('updating',lineDataKey);
 
 			let newLineDataPoint = {
-				time: new Date(data[timeKey]),
+				time: new Date(parseInt(data[timeKey])),
 				val: data[lineDataKey]
-			}
+			};
+
+			console.log(newLineDataPoint);
+
 			// push new data point onto the back
 			finalLineData[lineDataKey].push(newLineDataPoint);
 
-			// redraw the line and slide it to the left
-			let graphBoxSelector = `#${lineDataKey}-graph`;
-			let graphBoxPath = d3.select(`${graphBoxSelector} path`);
-			graphBoxPath
-				.attr("d", line)
-        .attr("transform", null)
-	      .transition()
-        .attr("transform", "translate(" + x(0) + ")");
-
       // pop the old data point off the front
 			finalLineData[lineDataKey].shift();
+
+			// get box
+			const svgForKey = d3.select(`#${lineDataKey}-graph`).transition();
+
+			console.log('update ', lineDataKey, svgForKey, svgForKey.select('path'));
+
+			svgForKey
+				.select('path')
+	      .attr("fill", "none")
+	      .attr("stroke", "steelblue")
+	      .attr("stroke-linejoin", "round")
+	      .attr("stroke-linecap", "round")
+	      .attr("stroke-width", 1.5)
+	      .duration(750)
+				.attr('d', line(finalLineData[lineDataKey]));
 		}
 
 		var openSocket = function() {
+			return; // TODO: Make sockets work
 			var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/dashboard_update');
 			console.log('socket io opened', socket);
 
@@ -273,11 +290,23 @@
 	    });
 	    
 	    socket.on('data_updated', function(data) {
+	    	console.log('data', data);
+
+	    	data = JSON.parse(data);
+
 	    	console.log(`data_updated`, data);
-	    	Object.keys(data).forEach((dataKey) => {
+	    	for(const dataKey in data) {
+	    		if(dataKey == timeKey || dataKey == deviceKey) {
+	    			return;
+	    		}
+
+	    		// check for 'None'
+	    		if(data[dataKey] == 'None') {
+	    			data[dataKey] = null;
+	    		}
 	    		// update graph
 	    		updateLineGraph(dataKey, data); 
-	    	});
+	    	}
 	    });
 	    
 	    socket.on('disconnect', function() {
