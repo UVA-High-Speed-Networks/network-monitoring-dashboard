@@ -174,7 +174,7 @@ def createSSHClient(server, port, user, password):
     return client
 
 _seconds_per_minute = 60
-def pull_minutes_of_data(minutes=60):
+def pull_minutes_of_data(minutes=60, sample_rate=None):
     sys.stdout.write('test')
     # pandas settings
     pd.set_option('display.float_format', lambda x: '%.3f' % x)
@@ -184,11 +184,17 @@ def pull_minutes_of_data(minutes=60):
     # trim data to last [minutes]
     interval_in_seconds = minutes * _seconds_per_minute
     current_unix_time = time.time()
-    hour_ago_unix_time = current_unix_time - interval_in_seconds
-    hour_data = data[data.ts >= hour_ago_unix_time]
+    interval_ago_unix_time = current_unix_time - interval_in_seconds
+    time_span_data = data[data.ts >= interval_ago_unix_time]
+    # sample data, if specified
+    if sample_rate:
+        print 'sampling'
+        time_span_data = time_span_data.sample(frac=sample_rate)
     # convert to json with nice null values
-    json_data = json.dumps(hour_data.to_dict('index'))
+    json_data = json.dumps(time_span_data.to_dict('index'))
     json_data_clean = json_data.replace('NaN', '""')
-    # print 'data shape', data.shape, '\n', 'hour_data shape', hour_data.shape
+    #
+    print 'time_span_data shape', time_span_data.shape
+    #
     return shellHandler, json_data_clean
 

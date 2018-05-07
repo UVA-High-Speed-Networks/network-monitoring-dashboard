@@ -277,14 +277,14 @@
 	      .attr("stroke-width", 1.5)
 	      .attr("d", line(dataToDisplay));
 
-      // draw dashed line to connect missing data
+      // draw faded line to connect missing data
 		  g.append("path")
 	      .attr("fill", "none")
 	      .attr("stroke", "steelblue")
 	      .attr("stroke-linejoin", "round")
 	      .attr("stroke-linecap", "round")
 	      .attr("stroke-width", 1.5)
-	      .style('opacity', '0.3')
+	      .style('opacity', '0.2')
 	      .attr("d", line(filteredData));
 		}
 

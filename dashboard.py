@@ -61,7 +61,7 @@ def dashboard_data(minutes):
 		return raw_stats_sample
 	global shellHandler
 	print 'pulling minutes'
-	shellHandler, data_json = pull_minutes_of_data(int(minutes))
+	shellHandler, data_json = pull_minutes_of_data(int(minutes), sample_rate=0.1)
 	print 'set shellHandler', shellHandler
 	return data_json
 
