@@ -19,14 +19,15 @@ from ShellHandler import *
 # load config file
 raw_config = open('config.json').read()
 config = json.loads(raw_config)
+version_number = config['version_number']
 
 # instantiate global variables
 unique_traffic_stats_timestamps = set()
-traffic_stats_headers = ['cpu','cpu00','cpu01','cpu10','cpu11','cpu12','cpu13','cpu14','cpu15','cpu16','cpu17','cpu18','cpu19','cpu02','cpu20','cpu21','cpu22','cpu23','cpu03','cpu04','cpu05','cpu06','cpu07','cpu08','cpu09','cumPacketLoss','device','mem_usage','packetLoss','packetRate','packetRateBro','packetSize','ts','utilization']
+traffic_stats_headers = ['cpu','cpu00','cpu01','cpu10','cpu11','cpu12','cpu13','cpu14','cpu15','cpu16','cpu17','cpu18','cpu19','cpu02','cpu20','cpu21','cpu22','cpu23','cpu03','cpu04','cpu05','cpu06','cpu07','cpu08','cpu09','cumPacketLoss','device','ifconfig_drop_rate','mem_usage','packetLoss','packetRate','packetRateBro','packetSize','ts','utilization']
 
-def follow_traffic_stats(shellHandler, callback, version="v1", device="em2"):
+def follow_traffic_stats(shellHandler, callback, device="em2"):
     # get traffic stats path
-    traffic_stats_filename = '/trafficStats_{}_{}.txt'.format(version, device)
+    traffic_stats_filename = '/trafficStats_v{}_{}.txt'.format(version_number, device)
     traffic_stats_path = '/home/bea3ch/shared/trafficAnalysis' + traffic_stats_filename
     # follow file being edited on server
     file_tail_cmd = 'tail -n0 -f {}'.format(traffic_stats_path)
@@ -53,7 +54,7 @@ def line_to_traffic_stats_obj(line):
         _obj[header] = line[_i].strip()
     return _obj
 
-def pull_data(uname, passwd, version="v1", local_dir="./", device="em2"):
+def pull_data(uname, passwd, local_dir="./", device="em2"):
     server = config['server']
     user = uname
     password= passwd
@@ -90,7 +91,7 @@ def pull_data(uname, passwd, version="v1", local_dir="./", device="em2"):
     #copy all relevant logs into tmp folder
     sh.execute('mkdir {}'.format(folder))
     sh.execute('cp {} {}'.format(fnames, folder))
-    traffic_stats_filename = '/trafficStats_{}_{}.txt'.format(version, device)
+    traffic_stats_filename = '/trafficStats_v{}_{}.txt'.format(version_number, device)
     traffic_stats_path = '/home/bea3ch/shared/trafficAnalysis' + traffic_stats_filename
     sh.execute('cp {} {}'.format(traffic_stats_path,folder))
     # compress tmp folder into a tarball and copy to local
@@ -107,7 +108,7 @@ def pull_data(uname, passwd, version="v1", local_dir="./", device="em2"):
     [os.system('gunzip {}'.format('/'.join([folder,f]))) for f in local_files if '.gz' in f]
     # remove any remaining .gz files
     os.system('rm {}/*.gz'.format(folder))
-    df = pd.read_csv(folder + traffic_stats_filename, index_col=False)
+    df = pd.read_csv(folder + traffic_stats_filename, usecols=xrange(len(traffic_stats_headers)), index_col=False)
     unique_traffic_stats_timestamps.update(df.ts.unique())
     # rename [cpu0 -> cpu00], [cpu1 -> cpu01], ..., [cpu9 -> cpu09]
     rename_keys = {}
@@ -131,7 +132,7 @@ def build_dfs(dire='.', device="em2", join_key="minute"):
     # create stat dataframe from capture loss list
     df_cl = build_df_from_list(capfiles, dire)
     # get trafficStats
-    df_dev = pd.read_csv(dire+'/trafficStats_v1_'+device+'.txt', index_col=False)
+    df_dev = pd.read_csv(dire+'/trafficStats_v'+version_number+'_'+device+'.txt', index_col=False)
     if 'time' in df_dev.columns: df_dev = add_datetime(df_dev)
     df_dev = add_hashes(df_dev)
     df_comb = df_stats.set_index(join_key).join(df_cl.set_index(join_key),rsuffix="cl")
