@@ -25,6 +25,9 @@
 			<div id="pull-data">
 				<h4>Pulling data...</h4>
 				<i class="fa fa-spinner fa-spin" style="font-size:24px"></i></div>
+			<div id="data-graphs-3" class="data-graphs-box">
+				<h2 class="data-graphs-header"> Bro Log Data </h2>
+			</div>
 			<div id="data-graphs-2" class="data-graphs-box">
 				<h2 class="data-graphs-header"> Utilization </h2>
 			</div>
@@ -75,6 +78,7 @@
 		var lineData = {};
 		var finalLineData = {};
 		var parsedData; 
+		var captureLossData;
 		var ws;
 		let timeKey = 'ts';
 		let deviceKey = 'device';
@@ -103,7 +107,8 @@
 		var processInitialData = function(data) {
 		  $('#data').append(data);
 			// parse data json
-			parsedData = JSON.parse(data);
+			data = JSON.parse(data);
+			parsedData = JSON.parse(data['trafficStats']);
 			// create object to store all object data
 			let dataTypes = Object.keys(parsedData[Object.keys(parsedData)[0]]);
 			dataTypes.forEach((type) => {
@@ -180,7 +185,102 @@
 		  $('#utilization-graph-data').append(`<span style="font-size:5px">${JSON.stringify(utilizationGraphData)}<span>`);
 
 			// open socket & start listening
-			openSocket();
+			// openSocket();
+
+			// graph data from bro
+			graphBroData(data['captureLossStats']);
+			graphBroData(data['broStats']);
+		}
+
+		var graphBroData = function(data) {
+			console.log('graphing capture loss data', data);
+			broData = JSON.parse(data);
+			let broDataArray = [];
+
+			Object.keys(broData).sort().forEach(key => {
+				broDataArray.push(broData[key]);
+			});
+
+			const broKeysToIgnore = ['ts', 'peer'];
+
+			Object.keys(broData[0]).forEach(key => {
+				if(broKeysToIgnore.includes(key)) {
+					return;
+				}
+				// create graph data
+				const graphData = broDataArray.map(x => {
+					return {
+						'time': new Date(1000 * x['ts']),
+						'val': x[key]
+					};
+				});
+				// sort by time
+				graphData.sort((x, y) => { return x.time - y.time; });
+				// graph data
+				graphTimeStampedData(graphData, key);
+			});
+		}
+
+		// graphs an array of data where each object contains ['val', 'time']
+		var graphTimeStampedData = function(data, graphTitle) {
+			console.log('graphing timestamped', graphTitle, data);
+			$('#data-graphs-3').append(`<div id="${graphTitle}-graph" class="graph-box"><h3>${graphTitle}</h3><svg width=${svgWidth} height=${svgHeight}></svg></div>`);
+
+			var svg = d3.select('#data-graphs-3 .graph-box:last-child > svg'),
+		    margin = {top: 20, right: 20, bottom: 30, left: 90},
+		    width = svg.attr("width") - margin.left - margin.right,
+		    height = svg.attr("height") - margin.top - margin.bottom,
+		    g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+			var x = d3.scaleTime().rangeRound([0, width]);
+			var y = d3.scaleLinear().rangeRound([height, 0]);
+
+			line = d3.line()
+		    .x(function(d) { return x(d.time); })
+		    .y(function(d) { return y(d.val); })
+		    .defined(function(d) { return d.val; }) ;
+
+		  x.domain(d3.extent(data.map(x => x.time)));
+		  y.domain(_extent(data.map(x => x.val)));
+
+			let filteredData = data.filter(line.defined());
+
+			console.log('appending to g',g);
+
+		  g.append("g")
+	      .attr("transform", "translate(0," + height + ")")
+	      .call(d3.axisBottom(x))
+		    .select(".domain")
+	      .remove();
+
+		  g.append("g")
+	      .call(d3.axisLeft(y))
+		    .append("text")
+	      .attr("fill", "#000")
+	      .attr("transform", "rotate(-90)")
+	      .attr("y", 6)
+	      .attr("dy", "0.71em")
+	      .attr("text-anchor", "end")
+	      .text(graphTitle);
+
+      // draw actual path
+		  g.append("path")
+	      .attr("fill", "none")
+	      .attr("stroke", "steelblue")
+	      .attr("stroke-linejoin", "round")
+	      .attr("stroke-linecap", "round")
+	      .attr("stroke-width", 1.5)
+	      .attr("d", line(data));
+
+      // draw faded line to connect missing data
+		  g.append("path")
+	      .attr("fill", "none")
+	      .attr("stroke", "steelblue")
+	      .attr("stroke-linejoin", "round")
+	      .attr("stroke-linecap", "round")
+	      .attr("stroke-width", 1.5)
+	      .style('opacity', '0.2')
+	      .attr("d", line(filteredData));
 		}
 
 		var graphTwoLines = function(lineOneKey, lineTwoKey) {

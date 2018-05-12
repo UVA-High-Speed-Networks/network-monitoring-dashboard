@@ -5,18 +5,20 @@ Created on Sat Mar 24 13:54:16 2018
 @author: babraham, jxm
 """
 
-import glob, json, os, paramiko, re, sys, time
+import datetime, glob, json, os, paramiko, re, sys, time
 
 from bat.log_to_dataframe import LogToDataFrame
 
 import datetime as dt   
-from log_parser import parse_log
 import matplotlib.dates as md    
 import matplotlib.pyplot as plt
 import numpy as np    
 import pandas as pd
 from scp import SCPClient  
 from ShellHandler import *
+
+
+pd.set_option('display.max_columns', 500)
 
 # load config file
 raw_config = open('config.json').read()
@@ -124,8 +126,24 @@ def pull_data(uname, passwd, local_dir="./", device="em2"):
             capture_loss_df.merge(LogToDataFrame(file))
         except Exception as e: 
             print 'Error loading', file + ':', e
-    print capture_loss_df.tail()
-
+    # reset index and convert datetimes to unix epochs
+    capture_loss_df.reset_index(level=0, inplace=True)
+    capture_loss_df.ts = capture_loss_df.ts.map(lambda x: (x-datetime.datetime(1970,1,1)).total_seconds())
+    capture_loss_df.drop('ts_delta', axis=1, inplace=True)
+    # read in bro stats files
+    stats_files = glob.glob('{}/*stats*log'.format(tmp_folder))
+    stats_files.sort()
+    stats_df = LogToDataFrame(stats_files.pop())
+    for file in stats_files:
+        try:
+            stats_df.merge(LogToDataFrame(file))
+        except Exception as e: 
+            print 'Error loading', file + ':', e
+    # reset index and convert datetimes to unix epochs
+    stats_df.reset_index(level=0, inplace=True)
+    stats_df.ts = stats_df.ts.map(lambda x: (x-datetime.datetime(1970,1,1)).total_seconds())
+    stats_df.pkt_lag = str(stats_df.pkt_lag)
+    print stats_df.head()
     # read in trafficStats csv
     traffic_stats_df = pd.read_csv(tmp_folder + traffic_stats_filename, index_col=False)
     unique_traffic_stats_timestamps.update(traffic_stats_df.ts.unique())
@@ -135,7 +153,7 @@ def pull_data(uname, passwd, local_dir="./", device="em2"):
         rename_keys['cpu' + str(i)] = 'cpu0' + str(i)
     traffic_stats_df = traffic_stats_df.rename(columns=rename_keys)
     # return objs
-    return sh, traffic_stats_df, capture_loss_df
+    return sh, traffic_stats_df, capture_loss_df, stats_df
 
 def createSSHClient(server, port, user, password):
     client = paramiko.SSHClient()
@@ -144,26 +162,38 @@ def createSSHClient(server, port, user, password):
     client.connect(server, port, user, password)
     return client
 
+def data_frame_to_clean_json(df):
+    df_json = json.dumps(df.to_dict('index'))
+    df_json_clean = df_json.replace('NaN', '""')
+    return df_json_clean
+
 _seconds_per_minute = 60
 def pull_minutes_of_data(minutes=60, sample_rate=None):
     # pandas settings
     pd.set_option('display.float_format', lambda x: '%.3f' % x)
     # get data from ivy
     username, password = config['username'], config['password']
-    shellHandler, traffic_stats_data, capture_loss_data = pull_data(username, password)
-    # trim data to last [minutes]
+    shellHandler, traffic_stats_data, capture_loss_data, stats_data = pull_data(username, password)
+    # get last interval unix time
     interval_in_seconds = minutes * _seconds_per_minute
     current_unix_time = time.time()
     interval_ago_unix_time = current_unix_time - interval_in_seconds
-    time_span_data = data[data.ts >= interval_ago_unix_time]
+    # trim to data since last interval
+    traffic_stats_data = traffic_stats_data[traffic_stats_data.ts >= interval_ago_unix_time]
+    capture_loss_data = capture_loss_data[capture_loss_data.ts >= interval_ago_unix_time]
+    stats_data = stats_data[stats_data.ts >= interval_ago_unix_time]
     # sample data, if specified
     if sample_rate:
         print 'sampling'
-        time_span_data = time_span_data.sample(frac=sample_rate)
+        traffic_stats_data = traffic_stats_data.sample(frac=sample_rate)
+        capture_loss_data = capture_loss_data.sample(frac=sample_rate)
+        stats_data = stats_data.sample(frac=sample_rate)
     # convert to json with nice null values
-    json_data = json.dumps(time_span_data.to_dict('index'))
-    json_data_clean = json_data.replace('NaN', '""')
+    traffic_stats_json_data_clean = data_frame_to_clean_json(traffic_stats_data)
+    capture_loss_json_data_clean = data_frame_to_clean_json(capture_loss_data)
+    stats_json_data_clean = data_frame_to_clean_json(stats_data)
     # return objects
-    print 'time_span_data shape', time_span_data.shape
-    return shellHandler, json_data_clean
+    print 'traffic_stats_data shape', traffic_stats_data.shape
+    print 'cljdc', capture_loss_json_data_clean
+    return shellHandler, traffic_stats_json_data_clean, capture_loss_json_data_clean, stats_json_data_clean
 

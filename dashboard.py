@@ -51,17 +51,25 @@ def index():
 
 @app.route('/dashboard/<minutes>')
 def dashboard(minutes):
+  print 'dashboard()'
   return render_template('dashboard.html', minutes=minutes)
 
 @app.route('/dashboard_data/<minutes>')
 def dashboard_data(minutes):
+  print 'dashboard_data()'
   if config['debug']:
     return raw_stats_sample
   global shellHandler
   print 'pulling minutes'
-  shellHandler, data_json = pull_minutes_of_data(int(minutes)) #, sample_rate=1)
+  shellHandler, traffic_stats_data, capture_loss_data, bro_stats_data = pull_minutes_of_data(int(minutes)) #, sample_rate=1)
   print 'set shellHandler', shellHandler
-  return data_json
+  dashboard_data = {
+	  'trafficStats': traffic_stats_data,
+	  'captureLossStats': capture_loss_data,
+	  'broStats': bro_stats_data
+  }
+  print 'keys', dashboard_data.keys()
+  return json.dumps(dashboard_data)
 
 @socketio.on('disconnect_request', namespace='/dashboard_update')
 def disconnect_request():
