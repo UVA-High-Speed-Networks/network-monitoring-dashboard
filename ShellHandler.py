@@ -76,7 +76,7 @@ class ShellHandler:
             sherr.pop()
         if sherr and cmd in sherr[0]:
             sherr.pop(0)
-
+            
         return shin, shout, sherr
 
     def execute_and_wait(self, cmd, callback):

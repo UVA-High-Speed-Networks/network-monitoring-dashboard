@@ -31,6 +31,9 @@
 			<div id="data-graphs" class="data-graphs-box">
 				<h2 class="data-graphs-header"> All Graphs </h2>
 			</div>
+			<h6> Utilization Graph Data </h6>
+			<div id="utilization-graph-data"></div>
+			<h6> All Data </h6>
 			<div id="data"></div>
 	</body>
 	<style>
@@ -153,7 +156,10 @@
 			});
 
 			// graph things over two axes
-			graphTwoLines('utilization', 'packetLoss');
+			graphTwoLines('packetLoss', 'utilization');
+			
+			graphTwoLines('ifconfig_drop_rate', 'utilization');
+
 			graphTwoLines('packetRate', 'packetRateBro');
 
 			// set device name in header
@@ -164,6 +170,14 @@
 
 			// Show headers
 			$('.data-graphs-header').css('display', 'inherit');
+
+			// fill in Utilization Graph Data
+		  const utilizationGraphData = {};
+		  ['utilization', 'packetLoss', 'ifconfig_drop_rate'].forEach(key => {
+		  	utilizationGraphData[key] = lineData[key];
+		  });
+		  console.log('utilizationGraphData', utilizationGraphData);
+		  $('#utilization-graph-data').append(`<span style="font-size:5px">${JSON.stringify(utilizationGraphData)}<span>`);
 
 			// open socket & start listening
 			openSocket();
@@ -177,7 +191,7 @@
 			let lineOneData = lineData[lineOneKey];
 			let lineTwoData = lineData[lineTwoKey];
 
-			$('#data-graphs-2').append(`<div id="${lineOneKey}-${lineTwoKey}-graph"class="graph-box graph-box-2"><h3>${lineOneKey} vs. ${lineTwoKey}</h3><svg width=${largeSvgWidth} height=${largeSvgHeight}></svg></div>`);
+			$('#data-graphs-2').append(`<div id="${lineOneKey}-${lineTwoKey}-graph"class="graph-box graph-box-2"><h3>${lineOneKey}, ${lineTwoKey} vs. time</h3><svg width=${largeSvgWidth} height=${largeSvgHeight}></svg></div>`);
 
 			let svg = d3.select('.graph-box:last-child > svg'),
 		    margin = { top: 50, right: 60, bottom: 30, left: 60 },
@@ -214,7 +228,7 @@
 	      .attr("y", 6)
 	      .attr("dy", "0.71em")
 	      .attr("text-anchor", "end")
-	      .style("transform", "translateY(-30px)")
+	      .style("transform", "translate(30px,-30px)")
 	      .text(lineOneKey);
 
 		  g.append("path")
