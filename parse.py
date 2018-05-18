@@ -15,15 +15,13 @@ def parse_to_df(logs_dir, version_number="2", device="em2"):
     # read in capture loss files
     capture_loss_files = glob.glob('{}/*capture_loss*log'.format(logs_dir))
     capture_loss_df = merge_logs(capture_loss_files)
-    # reset index and convert datetimes to unix epochs
-    capture_loss_df.reset_index(level=0, inplace=True)
+    # convert datetimes to unix epochs
     capture_loss_df.ts = capture_loss_df.ts.map(lambda x: (x-datetime.datetime(1970,1,1)).total_seconds())
     capture_loss_df.drop('ts_delta', axis=1, inplace=True)
     # read in bro stats files
     stats_files = glob.glob('{}/*stats*log'.format(logs_dir))
     stats_df = merge_logs(stats_files)
-    # reset index and convert datetimes to unix epochs
-    stats_df.reset_index(level=0, inplace=True)
+    # convert datetimes to unix epochs
     stats_df.ts = stats_df.ts.map(lambda x: (x-datetime.datetime(1970,1,1)).total_seconds())
     stats_df.pkt_lag = str(stats_df.pkt_lag)
     print stats_df.head()
@@ -45,13 +43,17 @@ def merge_logs(files_list):
     """
     files_list.sort()
     # create LogToDataFrame from each log file
-    bat_dfs = [LogToDataFrame(f) for f in files_list]
+    # reset index will change the dataframe from being indexed by a datetime, to have the datetime as a column in it, 
+    #  and indexed just by a int in a range
+    bat_dfs = [LogToDataFrame(f).reset_index(level=0) for f in files_list]
     ######### WEIRD BUG ##############
     # We can't just concat all the LogToDataFrame's together, it gives a weird error
     # so we round about turn the LogToDataFrame's into normal DataFrame's then concat those
     #################################
     dfs = [pd.DataFrame(d.to_dict()) for d in bat_dfs]
-    return pd.concat(dfs)
+    cat = pd.concat(dfs)
+    print("DFSHAPE {}".format(cat.shape))
+    return cat
 
 def cleanup_df(df_list, interval, convert_to_json=True, sample_rate=None):
     """
