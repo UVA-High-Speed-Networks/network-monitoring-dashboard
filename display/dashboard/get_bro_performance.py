@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import numpy as np    
 import pandas as pd
 from scp import SCPClient  
-from ShellHandler import *
+from ShellHandler import ShellHandler
 
 
 pd.set_option('display.max_columns', 500)

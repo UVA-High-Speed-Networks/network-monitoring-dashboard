@@ -18,7 +18,7 @@ To run, first create a configuration file called `config.json` that looks someth
 ```
 {
 	"username": "your-username",
-	"password": "your-password,
+	"password": "your-password",
 	"port": 8080,
 	"server": "remote.server.url.edu",
 	"version_number": "2",

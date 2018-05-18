@@ -107,8 +107,11 @@
 		var processInitialData = function(data) {
 		  $('#data').append(data);
 			// parse data json
+			console.log(data);
 			data = JSON.parse(data);
-			parsedData = JSON.parse(data['trafficStats']);
+			console.log(data["trafficStats"]);
+			//parsedData = JSON.parse(data['trafficStats']);
+			parsedData = data["trafficStats"]
 			// create object to store all object data
 			let dataTypes = Object.keys(parsedData[Object.keys(parsedData)[0]]);
 			dataTypes.forEach((type) => {
