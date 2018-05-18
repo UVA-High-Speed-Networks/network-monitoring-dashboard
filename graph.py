@@ -15,6 +15,8 @@ def main():
 def capture_loss(tr, cap):
 	fig, ax1 = plt.subplots()
 
+	fig.suptitle("Utilization, capture_loss percent_lost vs time")
+
 	color = 'tab:red'
 
 	x1 = dates.epoch2num(tr.ts)
@@ -40,6 +42,8 @@ def capture_loss(tr, cap):
 	plt.savefig("capture_loss.png")
 def ifconf(tr, stat):
 	fig, ax1 = plt.subplots()
+
+	fig.suptitle("Utilization, ifconfig drop_rate vs time")
 
 	color = 'tab:red'
 	
@@ -69,6 +73,8 @@ def ifconf(tr, stat):
 
 def broctl(tr, stat):
 	fig, ax1 = plt.subplots()
+
+	fig.suptitle("Utilization, Broctl packetLoss vs time")
 
 	color = 'tab:red'
 	
@@ -103,6 +109,8 @@ def broctl(tr, stat):
 
 def statslog(tr, stat):
 	fig, ax1 = plt.subplots()
+
+	fig.suptitle("Utilization, Stat.log pkts_dropped vs time")
 
 	color = 'tab:red'
 	
