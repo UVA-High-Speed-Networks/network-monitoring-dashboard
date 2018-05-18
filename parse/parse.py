@@ -14,26 +14,14 @@ def parse_to_df(logs_dir, version_number="2", device="em2"):
     """
     # read in capture loss files
     capture_loss_files = glob.glob('{}/*capture_loss*log'.format(logs_dir))
-    capture_loss_files.sort()
-    capture_loss_df = LogToDataFrame(capture_loss_files.pop())
-    for file in capture_loss_files:
-        try:
-            capture_loss_df.merge(LogToDataFrame(file))
-        except Exception as e: 
-            print 'Error loading', file + ':', e
+    capture_loss_df = merge_logs(capture_loss_files)
     # reset index and convert datetimes to unix epochs
     capture_loss_df.reset_index(level=0, inplace=True)
     capture_loss_df.ts = capture_loss_df.ts.map(lambda x: (x-datetime.datetime(1970,1,1)).total_seconds())
     capture_loss_df.drop('ts_delta', axis=1, inplace=True)
     # read in bro stats files
     stats_files = glob.glob('{}/*stats*log'.format(logs_dir))
-    stats_files.sort()
-    stats_df = LogToDataFrame(stats_files.pop())
-    for file in stats_files:
-        try:
-            stats_df.merge(LogToDataFrame(file))
-        except Exception as e: 
-            print 'Error loading', file + ':', e
+    stats_df = merge_logs(stats_files)
     # reset index and convert datetimes to unix epochs
     stats_df.reset_index(level=0, inplace=True)
     stats_df.ts = stats_df.ts.map(lambda x: (x-datetime.datetime(1970,1,1)).total_seconds())
@@ -49,6 +37,21 @@ def parse_to_df(logs_dir, version_number="2", device="em2"):
     traffic_stats_df = traffic_stats_df.rename(columns=rename_keys)
     # return objs
     return traffic_stats_df, capture_loss_df, stats_df
+
+def merge_logs(files_list):
+    """
+    files_list: list of strings
+    Merge a list of logs files into one dataframe
+    """
+    files_list.sort()
+    # create LogToDataFrame from each log file
+    bat_dfs = [LogToDataFrame(f) for f in files_list]
+    ######### WEIRD BUG ##############
+    # We can't just concat all the LogToDataFrame's together, it gives a weird error
+    # so we round about turn the LogToDataFrame's into normal DataFrame's then concat those
+    #################################
+    dfs = [pd.DataFrame(d.to_dict()) for d in bat_dfs]
+    return pd.concat(dfs)
 
 def cleanup_df(df_list, interval, convert_to_json=True, sample_rate=None):
     """
