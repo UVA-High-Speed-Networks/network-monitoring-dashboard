@@ -31,11 +31,12 @@ def capture_loss(tr, cap):
 	color = 'tab:blue'
 
 	x2 = dates.epoch2num(cap.ts)
-	y2 = cap.percent_lost
+	y2 = cap.percent_lost / 100
 	
 	ax2.plot_date(x2, y2, fmt="-", color=color)
 	ax2.set_ylabel("capture_loss percent_loss", color=color)
 	ax2.tick_params(axis="y", labelcolor=color)
+	ax2.set_ylim(0, 1)
 
 	ax1.set_xlim([x2[0], x2[-1]])
 
@@ -112,7 +113,7 @@ def broctl(tr, stat):
 def statslog(tr, stat):
 	fig, ax1 = plt.subplots()
 
-	fig.suptitle("Utilization, Stat.log pkts_dropped vs time")
+	fig.suptitle("Utilization, Stat.log drop rate vs time")
 
 	color = 'tab:red'
 	
@@ -128,11 +129,12 @@ def statslog(tr, stat):
 	color = 'tab:blue'
 
 	x2 = dates.epoch2num(stat.ts)
-	y2 = stat.pkts_dropped
+	y2 = stat.pkts_dropped / (stat.pkts_dropped + stat.pkts_proc)
 	
 	ax2.plot_date(x2, y2, fmt="-", color=color)
-	ax2.set_ylabel("stats.log pkts_dropped", color=color)
+	ax2.set_ylabel("stats.log drop rate", color=color)
 	ax2.tick_params(axis="y", labelcolor=color)
+	ax2.set_ylim(0, 1)
 
 	ax1.set_xlim([x2[0], x2[-1]])
 
