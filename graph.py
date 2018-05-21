@@ -65,6 +65,7 @@ def ifconf(tr, stat):
 	ax2.plot_date(x2, y2, fmt="-", color=color)
 	ax2.set_ylabel("ifconfig drop_rate", color=color)
 	ax2.tick_params(axis="y", labelcolor=color)
+	ax2.set_ylim(0, 1)
 
 	lim = dates.epoch2num(stat.ts)
 	ax1.set_xlim([lim[0], lim[-1]])
@@ -100,6 +101,7 @@ def broctl(tr, stat):
 	ax2.plot_date(x2, y2, fmt="-", color=color)
 	ax2.set_ylabel("broctl packetLoss", color=color)
 	ax2.tick_params(axis="y", labelcolor=color)
+	ax2.set_ylim(0, 1)
 
 	lim = dates.epoch2num(stat.ts)
 	ax1.set_xlim([lim[0], lim[-1]])
