@@ -23,7 +23,7 @@ def capture_loss(tr, cap):
 	y1 = tr.utilization
 	
 	ax1.plot_date(x1, y1, fmt="-", color=color)
-	ax1.set_ylabel("utilization", color=color)
+	ax1.set_ylabel("em2 utilization, GB/s", color=color)
 	ax1.tick_params(axis='y', labelcolor=color)
 	
 
@@ -53,7 +53,7 @@ def ifconf(tr, stat):
 	y1 = tr.utilization
 	
 	ax1.plot_date(x1, y1, fmt="-", color=color)
-	ax1.set_ylabel("utilization", color=color)
+	ax1.set_ylabel("em2 utilization, GB/s", color=color)
 	ax1.tick_params(axis='y', labelcolor=color)
 	
 
@@ -85,7 +85,7 @@ def broctl(tr, stat):
 	y1 = tr.utilization
 	
 	ax1.plot_date(x1, y1, fmt="-", color=color)
-	ax1.set_ylabel("utilization", color=color)
+	ax1.set_ylabel("em2 utilization, GB/s", color=color)
 	ax1.tick_params(axis='y', labelcolor=color)
 	
 
@@ -121,7 +121,7 @@ def statslog(tr, stat):
 	y1 = tr.utilization
 	
 	ax1.plot_date(x1, y1, fmt="-", color=color)
-	ax1.set_ylabel("utilization", color=color)
+	ax1.set_ylabel("em2 utilization, GB/s", color=color)
 	ax1.tick_params(axis='y', labelcolor=color)
 	
 
