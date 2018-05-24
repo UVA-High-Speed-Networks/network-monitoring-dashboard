@@ -16,13 +16,13 @@ def parse_to_df(logs_dir, version_number="2", device="em2"):
     capture_loss_files = glob.glob('{}/*capture_loss*log'.format(logs_dir))
     capture_loss_df = merge_logs(capture_loss_files)
     # convert datetimes to unix epochs
-    capture_loss_df.ts = capture_loss_df.ts.map(lambda x: (x-datetime.datetime(1970,1,1)).total_seconds())
+    #capture_loss_df.ts = capture_loss_df.ts.map(lambda x: x.timestamp())
     capture_loss_df.drop('ts_delta', axis=1, inplace=True)
     # read in bro stats files
     stats_files = glob.glob('{}/*stats*log'.format(logs_dir))
     stats_df = merge_logs(stats_files)
     # convert datetimes to unix epochs
-    stats_df.ts = stats_df.ts.map(lambda x: (x-datetime.datetime(1970,1,1)).total_seconds())
+    #stats_df.ts = stats_df.ts.map(lambda x: x.timestamp())
     stats_df.pkt_lag = str(stats_df.pkt_lag)
     print stats_df.head()
     # read in trafficStats csv
@@ -33,6 +33,9 @@ def parse_to_df(logs_dir, version_number="2", device="em2"):
     for i in xrange(10):
         rename_keys['cpu' + str(i)] = 'cpu0' + str(i)
     traffic_stats_df = traffic_stats_df.rename(columns=rename_keys)
+    # if you want to convert traffic_stats_df ts to datetime instead of unix timestamps:
+    traffic_stats_df.ts = traffic_stats_df.ts.apply(datetime.datetime.fromtimestamp)
+
     # return objs
     return traffic_stats_df, capture_loss_df, stats_df
 
@@ -45,6 +48,10 @@ def merge_logs(files_list):
     # create LogToDataFrame from each log file
     # reset index will change the dataframe from being indexed by a datetime, to have the datetime as a column in it, 
     #  and indexed just by a int in a range
+
+    # it may be incorrect to run reset_index here, it results in a dataframe that has indices like 
+    #  [0, 1, ..., 23, 0, 1, .. 23, 0, 1, ..., 23] if there are 3 log files being merged and each log file has 24 entries
+    #  it works for what we for simple things, but it may cause an error later
     bat_dfs = [LogToDataFrame(f).reset_index(level=0) for f in files_list]
     ######### WEIRD BUG ##############
     # We can't just concat all the LogToDataFrame's together, it gives a weird error
@@ -52,7 +59,6 @@ def merge_logs(files_list):
     #################################
     dfs = [pd.DataFrame(d.to_dict()) for d in bat_dfs]
     cat = pd.concat(dfs)
-    print("DFSHAPE {}".format(cat.shape))
     return cat
 
 def cleanup_df(df_list, interval, convert_to_json=True, sample_rate=None):
