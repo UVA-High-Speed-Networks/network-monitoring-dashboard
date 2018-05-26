@@ -16,6 +16,8 @@ import numpy as np
 import pandas as pd
 from scp import SCPClient  
 from ShellHandler import *
+from dateutil.parser import parse
+from log_parser import *
 
 
 pd.set_option('display.max_columns', 500)
@@ -58,15 +60,20 @@ def line_to_traffic_stats_obj(line):
         _obj[header] = line[_i].strip()
     return _obj
 
-def pull_data(uname, passwd, local_dir="./", device="em2"):
+def pull_data(uname, passwd, local_dir="./", device="em2", date=None, export=False):
     server = config['server']
     user = uname
     password= passwd
     bro_dir = '/mnt/localraid/bro/logs'
-    # 
-    cdt = dt.datetime.fromtimestamp(time.time())
+    #get date and time. If none provided, defaults to current date
+    if not date:
+        cdt = dt.datetime.fromtimestamp(time.time())
+    else:
+        if ':' not in date: date += " 12:00:00"
+        cdt = parse(date)       
     datestr = '-'.join([str(cdt.year),str(cdt.month),str(cdt.day-1)])
     cur_date = '-'.join([str(cdt.year),str(cdt.month),str(cdt.day)])
+        
     sh = ShellHandler(server, user, password)
     # remove local and rmeote tmp folder, if it exists
     tmp_folder = "./tmp_{}".format(cur_date)
@@ -143,7 +150,6 @@ def pull_data(uname, passwd, local_dir="./", device="em2"):
     stats_df.reset_index(level=0, inplace=True)
     stats_df.ts = stats_df.ts.map(lambda x: (x-datetime.datetime(1970,1,1)).total_seconds())
     stats_df.pkt_lag = str(stats_df.pkt_lag)
-    print stats_df.head()
     # read in trafficStats csv
     traffic_stats_df = pd.read_csv(tmp_folder + traffic_stats_filename, index_col=False)
     unique_traffic_stats_timestamps.update(traffic_stats_df.ts.unique())
@@ -152,7 +158,12 @@ def pull_data(uname, passwd, local_dir="./", device="em2"):
     for i in xrange(10):
         rename_keys['cpu' + str(i)] = 'cpu0' + str(i)
     traffic_stats_df = traffic_stats_df.rename(columns=rename_keys)
-    # return objs
+    
+    if export:
+        capture_loss_df.to_csv('capture_loss_comb_{}.csv'.format(datestr))
+        stats_df.to_csv('stats_comb_{}.csv'.format(datestr))
+        traffic_stats_df.to_csv('trafficStats_comb_{}.csv'.format(datestr))
+    
     return sh, traffic_stats_df, capture_loss_df, stats_df
 
 def createSSHClient(server, port, user, password):
@@ -196,4 +207,3 @@ def pull_minutes_of_data(minutes=60, sample_rate=None):
     print 'traffic_stats_data shape', traffic_stats_data.shape
     print 'cljdc', capture_loss_json_data_clean
     return shellHandler, traffic_stats_json_data_clean, capture_loss_json_data_clean, stats_json_data_clean
-
