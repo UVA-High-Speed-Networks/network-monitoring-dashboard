@@ -35,7 +35,7 @@ def capture_loss(tr,cap):
 	x2 = cap.ts
 	x2 = dates.date2num(x2)
 
-	y2 = cap1.percent_lost
+	y2 = cap.percent_lost
 	y2 = y2 / 100
 	
 	ax2.plot_date(x2, y2, fmt="-", color=color)

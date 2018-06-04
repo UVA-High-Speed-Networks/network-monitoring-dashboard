@@ -13,13 +13,13 @@ def parse_to_df(logs_dir, version_number="2", device="em2"):
     Parse all the logs in logs_dir into pandas dataframes
     """
     # read in capture loss files
-    capture_loss_files = glob.glob('{}/*capture_loss*log'.format(logs_dir))
+    capture_loss_files = glob.glob('{}/*capture_loss*log*'.format(logs_dir))
     capture_loss_df = merge_logs(capture_loss_files)
     # convert datetimes to unix epochs
     #capture_loss_df.ts = capture_loss_df.ts.map(lambda x: x.timestamp())
     capture_loss_df.drop('ts_delta', axis=1, inplace=True)
     # read in bro stats files
-    stats_files = glob.glob('{}/*stats*log'.format(logs_dir))
+    stats_files = glob.glob('{}/*stats*log*'.format(logs_dir))
     stats_df = merge_logs(stats_files)
     # convert datetimes to unix epochs
     #stats_df.ts = stats_df.ts.map(lambda x: x.timestamp())
