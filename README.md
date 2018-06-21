@@ -4,10 +4,12 @@
 
 It is recommended to install the dependencies in a virtual environment so as not to pollute your system wide installation of python
 
-`mkdir ~/.virtualenvs`
-`virtualenv ~/.virtualenvs/netmon`
-`source ~/.virtualenvs/netmon/bin/activate`
-`pip install -r requirements.txt`
+```
+mkdir ~/.virtualenvs
+virtualenv ~/.virtualenvs/netmon
+source ~/.virtualenvs/netmon/bin/activate
+pip install -r requirements.txt
+```
 
 If you don't want to use `virtualenv` then you can just run the last line:
 `pip install -r requirements.txt`
